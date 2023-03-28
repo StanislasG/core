@@ -1,0 +1,4 @@
+digraph G {
+    async_get_users -> _async_load -> "self._users" -> _data_to_save -> _async_schedule -> async_delay_save -> async_callback_delayed_write;
+    AuthStore -> _data_to_save
+}

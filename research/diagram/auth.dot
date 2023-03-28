@@ -1,0 +1,93 @@
+digraph G {
+    subgraph cluster_0 {
+        label = "auth/";
+        
+        subgraph cluster_00 {
+            label = "prov/";
+            subgraph cluster_001 {
+                label = "init.py";
+                AuthProvider;
+                LoginFlow;
+            }
+            
+            subgraph cluster_002 {
+                label = "HA.py/HassLoginFlow";
+                async_step_init;
+                HassLoginFlow;
+            }
+            async_step_init -> async_validate_login;
+            LoginFlow -> HassLoginFlow;
+            
+            subgraph cluster_0000 {
+                label = "HA.py/HassAuthProv";
+                HassAuthProv;
+                # _init_
+                async_init;
+                # async_login_flow
+                async_validate_login;
+                # async_add_auth
+                # async_remove_auth
+                # async_change_password
+                async_get_or_create_cred;
+                # async_user_meta_for_cred
+            }
+            
+            subgraph cluster_00001 {
+                label = "HA.py/Data";
+                # _init_
+                # Data
+                # normalize_username
+                async_load;
+                # users
+                validate_login;
+                # hash_password
+                # add_auth
+                # async_remove_auth
+                # change_password
+                # async_save
+            }
+            
+            async_validate_login -> async_init;
+            async_get_or_create_cred -> async_init;
+            async_init -> async_load;
+            HassAuthProv -> async_validate_login;
+            
+            async_validate_login -> validate_login;
+        }
+        
+        
+        
+        subgraph cluster_001 {
+            label = "_init_.py";
+            
+            AuthManagerFlowManager;
+            AuthManager;
+        }
+        async_step_init -> AuthManagerFlowManager;
+        AuthManagerFlowManager -> async_get_or_create_cred;
+    }
+    
+    // subgraph cluster_1{
+    // label="HA/components/"
+    
+    // subgraph cluster_10 {
+    //   label="config"
+    //   websocket_create
+    //   websocket_delete
+    // }
+    
+    // websocket_create -> async_get_or_create_cred
+    // websocket_delete -> async_get_or_create_cred
+    
+    // subgraph cluster_11 {
+    //     label="HA/components/onboarding/views"
+    //     subgraph cluster_110 {
+    //         label="UserOnboarding"
+    //         post
+    //     }
+    // }
+    // post -> async_get_or_create_cred
+    
+    
+    HassLoginFlow -> HassAuthProv;
+}

@@ -1,0 +1,5 @@
+curl -H "Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxMjI4YTU2YmIyZjQ0ZDdlYmIxYzg2NWFkODIyNDFiYSIsImlhdCI6MTY3OTY4MzI0OCwiZXhwIjoxOTk1MDQzMjQ4fQ.3X4uxJIZsfhBkeBrIfPzKkL5n-0tLpRO3EMoYSfEb2g" -H "Content-Type: application/json" --request GET "http://localhost:8123/api/error_log"
+
+curl -X GET http://localhost:8123 -H "Content-Type: application/json" -d '{"username": "cmd", "password": "cmd"}'
+
+curl -u cmd 'ldap://localhost'

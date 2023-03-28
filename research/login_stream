@@ -1,0 +1,8 @@
+>>> curl localhost:8123/auth/providers
+
+<<< [{"name":"Home Assistant Local","id":null,"type":"homeassistant"}]
+
+>> curl -X POST localhost:8123/auth/token -H 'Referer: http://localhost:8123/?auth_callback=1&code=79a141e492384d02b7ec84cb58e69a22&state=eyJoYXNzVXJsIjoiaHR0cDovL2xvY2FsaG9zdDo4MTIzIiwiY2xpZW50SWQiOiJodHRwOi8vbG9jYWxob3N0OjgxMjMvIn0%3D\r\n'
+
+
+>>> curl -X POST localhost:8123/auth/login_flow -H 'Content-Type: application/json' -d '{"username":"admin2","password":"admin2","client_id":"http://localhost:8123/"}'
