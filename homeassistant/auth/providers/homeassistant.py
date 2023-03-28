@@ -19,6 +19,8 @@ from homeassistant.helpers.storage import Store
 from . import AUTH_PROVIDER_SCHEMA, AUTH_PROVIDERS, AuthProvider, LoginFlow
 from ..models import Credentials, UserMeta
 
+_LOGGER = logging.getLogger(__name__)
+
 STORAGE_VERSION = 1
 STORAGE_KEY = "auth_provider.homeassistant"
 
@@ -81,7 +83,7 @@ class Data:
     async def async_load(self) -> None:
         """Load stored data."""
         if (data := await self._store.async_load()) is None:
-            data = cast(dict[str, list[dict[str, str]]], {"users": []})
+            data = cast(dict[str, list[dict[str, str]]], {"users": [], "groups": []})
 
         seen: set[str] = set()
 
@@ -127,6 +129,13 @@ class Data:
         """Return users."""
         assert self._data is not None
         return self._data["users"]
+
+    # NEW not tested
+    @property
+    def groups(self) -> list[dict[str, str]]:
+        """Return groups."""
+        assert self._data is not None
+        return self._data["groups"]
 
     def validate_login(self, username: str, password: str) -> None:
         """Validate a username and password.
@@ -175,6 +184,45 @@ class Data:
                 "username": username,
                 "password": self.hash_password(password, True).decode(),
             }
+        )
+        # check if user["username"] should not be user["name"]?
+
+    # NEW not tested
+    # first base group, later devellopement list of group_ids
+    def add_auth_with_group(self, username: str, password: str, group_id: str) -> None:
+        """Add a new authenticated user/pass."""
+        username = self.normalize_username(username)
+
+        # check if user["username"] should not be user["name"]?
+        if any(
+            self.normalize_username(user["username"]) == username for user in self.users
+        ):
+            raise InvalidUser
+
+        self.users.append(
+            {
+                "username": username,
+                "password": self.hash_password(password, True).decode(),
+                "group_ids": group_id,  # removed list
+            }
+        )
+
+    # NEW not tested
+    def add_group(self, name: str) -> None:  # add , policy: str?
+        """Add a new group in auth."""
+        name = self.normalize_username(name)
+        # policy = cast(json, policy)
+
+        # policy = json.loads(policy)
+        if any(self.normalize_username(group["name"]) == name for group in self.groups):
+            raise InvalidUser
+        # _LOGGER.info("policy", {p: policy[p] for p in policy})
+        self.groups.append(
+            {
+                "name": name,
+                "id": name,
+                # "policy": #{"entities": {"entity_ids": {p: policy[p] for p in policy}}},
+            }  # self.hash_password(password, True).decode(),
         )
 
     @callback
@@ -256,6 +304,20 @@ class HassAuthProvider(AuthProvider):
             assert self.data is not None
 
         await self.hass.async_add_executor_job(self.data.add_auth, username, password)
+        await self.data.async_save()
+
+    # new not tested
+    async def async_add_auth_with_group(
+        self, username: str, password: str, group_id: str
+    ) -> None:
+        """Call add_auth on data."""
+        if self.data is None:
+            await self.async_initialize()
+            assert self.data is not None
+
+        await self.hass.async_add_executor_job(
+            self.data.add_auth_with_group, username, password, group_id
+        )
         await self.data.async_save()
 
     async def async_remove_auth(self, username: str) -> None:

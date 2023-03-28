@@ -24,6 +24,7 @@ async def async_setup(hass):
         vol.Required("user_id"): str,
         vol.Required("username"): str,
         vol.Required("password"): str,
+        # vol.Required("group"): policy, #Make a group selector in FE
     }
 )
 @websocket_api.require_admin
@@ -36,9 +37,37 @@ async def websocket_create(
     """Create credentials and attach to a user."""
     provider = auth_ha.async_get_provider(hass)
 
+    # get id if username already  exist
     if (user := await hass.auth.async_get_user(msg["user_id"])) is None:
         connection.send_error(msg["id"], "not_found", "User not found")
         return
+
+    group_id = "testId"  # Make it come from UI
+
+    # not useful, just for checking. It is taken afterwards
+    if (group := await hass.auth.async_get_group(group_id)) is None:
+        connection.send_error(msg["id"], "not_found", "Group not found")
+        return
+
+    user.groups = [group]
+
+    # Understand code
+    # msg = {'type': 'config/auth_provider/homeassistant/create',
+    #     'user_id': 'db377a97e3e64e94af6fd76367c7e774',
+    #     'username': 'aa',
+    #     'password': 'a',
+    #     'id': 37}
+
+    # User(name='a',
+    #     perm_lookup=PermissionLookup(entity_registry=<homeassistant.helpers.entity_registry.EntityRegistry object at 0x7fc7c404ea40>,
+    #     device_registry=<homeassistant.helpers.device_registry.DeviceRegistry object at 0x7fc7c404eb00>),
+    #     id='bb40aa9a67ad465e95532dcc1b7caec8',
+    #     is_owner=False,
+    #     is_active=True,
+    #     system_generated=False,
+    #     local_only=False,
+    #     groups=[Group(name='Users', policy={'entities': True}, id='system-users', system_generated=True)],
+    #     credentials=[], refresh_tokens={}, _permissions=None)
 
     if user.system_generated:
         connection.send_error(
@@ -49,7 +78,10 @@ async def websocket_create(
         return
 
     try:
-        await provider.async_add_auth(msg["username"], msg["password"])
+        # new not tested
+        await provider.async_add_auth_with_group(
+            msg["username"], msg["password"], group_id
+        )
     except auth_ha.InvalidUser:
         connection.send_error(msg["id"], "username_exists", "Username already exists")
         return

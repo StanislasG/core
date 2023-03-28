@@ -52,7 +52,7 @@ class AuthStore:
         self._lock = asyncio.Lock()
 
     async def async_get_groups(self) -> list[models.Group]:
-        """Retrieve all users."""
+        """Retrieve all users."""  # to do change
         if self._groups is None:
             await self._async_load()
             assert self._groups is not None
@@ -287,6 +287,8 @@ class AuthStore:
 
         return found
 
+    # at startup load all auth file
+    # users/groups/credentials/acces_tokens
     @callback
     def async_log_refresh_token_usage(
         self, refresh_token: models.RefreshToken, remote_ip: str | None = None
@@ -314,6 +316,7 @@ class AuthStore:
         if self._users is not None:
             return
 
+        # check if allowed...?
         self._perm_lookup = perm_lookup = PermissionLookup(ent_reg, dev_reg)
 
         if data is None or not isinstance(data, dict):
