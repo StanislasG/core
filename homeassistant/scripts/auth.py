@@ -34,6 +34,11 @@ def run(args):
     parser_add.add_argument("password", type=str)
     parser_add.set_defaults(func=add_user)
 
+    parser_add = subparsers.add_parser("add_group")
+    parser_add.add_argument("name", type=str)
+    parser_add.add_argument("policy", type=str)
+    parser_add.set_defaults(func=add_group)
+
     parser_validate_login = subparsers.add_parser("validate")
     parser_validate_login.add_argument("username", type=str)
     parser_validate_login.add_argument("password", type=str)
@@ -78,6 +83,20 @@ async def add_user(hass, provider, args):
     """Create a user."""
     try:
         provider.data.add_auth(args.username, args.password)
+    except hass_auth.InvalidUser:
+        print("Username already exists!")
+        return
+
+    # Save username/password
+    await provider.data.async_save()
+    print("Auth created")
+
+
+# new not tested
+async def add_group(hass, provider, args):
+    """Create a group."""
+    try:
+        provider.data.add_group(args.name, args.policy)
     except hass_auth.InvalidUser:
         print("Username already exists!")
         return
