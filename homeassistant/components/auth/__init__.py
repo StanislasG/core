@@ -71,7 +71,6 @@ active websocket connection.
     "type": "auth/current_user",
 }
 
-add auth/current_user_groups
 
 The result payload likes
 
@@ -94,6 +93,26 @@ The result payload likes
         }]
     }
 }
+
+## Get current user groups
+
+Send websocket command `auth/current_user_groups` will return current user groups of the
+active websocket connection.
+
+{
+    "id": 10,
+    "type": "auth/current_user_groups",
+}
+
+
+The result payload likes
+
+{
+    "id": 10,
+    "groups": ["system-admin", "myowngroup"]
+    }
+}
+
 
 ## Create a long-lived access token
 
