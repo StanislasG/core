@@ -71,6 +71,8 @@ active websocket connection.
     "type": "auth/current_user",
 }
 
+add auth/current_user_groups
+
 The result payload likes
 
 {
@@ -181,6 +183,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.http.register_view(LinkUserView(retrieve_result))
     hass.http.register_view(OAuth2AuthorizeCallbackView())
 
+    websocket_api.async_register_command(hass, websocket_current_user_groups)
     websocket_api.async_register_command(hass, websocket_current_user)
     websocket_api.async_register_command(hass, websocket_create_long_lived_access_token)
     websocket_api.async_register_command(hass, websocket_refresh_tokens)
@@ -467,6 +470,26 @@ def _create_auth_code_store() -> tuple[StoreResultType, RetrieveResultType]:
         return None
 
     return store_result, retrieve_result
+
+
+@websocket_api.websocket_command({vol.Required("type"): "auth/current_user_groups"})
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_current_user_groups(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return the current user groups."""
+    user = connection.user
+
+    connection.send_message(
+        websocket_api.result_message(
+            msg["id"],
+            {
+                "id": user.id,
+                "groups": [group.id for group in user.groups],
+            },
+        )
+    )
 
 
 @websocket_api.websocket_command({vol.Required("type"): "auth/current_user"})
