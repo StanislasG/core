@@ -83,6 +83,32 @@ class AuthStore:
 
         return self._users.get(user_id)
 
+    async def async_add_group(
+        self, name: str, entity: str, read: bool, control: bool, edit: bool
+    ) -> models.Group | None:
+        """Add a new group."""
+        if self._groups is None:
+            await self._async_load()
+        assert self._users is not None
+        assert self._groups is not None
+
+        entity_dict: dict[str, bool] = {"read": read, "control": control, "edit": edit}
+        new_policy: PolicyType = {"entities": {"entity_id": {entity: entity_dict}}}
+        # lookup = None
+        # perm = PolicyPermissions(new_policy, lookup)
+        # group = models.Group(name, new_policy)
+
+        kwargs: dict[str, Any] = {
+            "name": name,
+            "policy": new_policy,
+        }
+
+        new_group: models.Group = models.Group(**kwargs)
+        if isinstance(new_group, models.Group):
+            self._groups[new_group.id] = new_group
+            self._async_schedule_save_groups()
+        return None
+
     async def async_create_user(
         self,
         name: str | None,
@@ -501,6 +527,14 @@ class AuthStore:
     def _async_schedule_save(self) -> None:
         """Save users."""
         if self._users is None:
+            return
+
+        self._store.async_delay_save(self._data_to_save, 1)
+
+    @callback
+    def _async_schedule_save_groups(self) -> None:
+        """Save groups."""
+        if self._groups is None:
             return
 
         self._store.async_delay_save(self._data_to_save, 1)

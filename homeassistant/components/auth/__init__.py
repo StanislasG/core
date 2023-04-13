@@ -113,6 +113,17 @@ The result payload likes
     }
 }
 
+## Add a new group
+
+Send websocket command `auth/add_group` will add a group
+
+{
+    "id": 10,
+    "type": "auth/add_group",
+}
+
+send back .... fill in
+
 
 ## Create a long-lived access token
 
@@ -202,6 +213,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.http.register_view(LinkUserView(retrieve_result))
     hass.http.register_view(OAuth2AuthorizeCallbackView())
 
+    websocket_api.async_register_command(hass, websocket_add_group)
     websocket_api.async_register_command(hass, websocket_current_user_groups)
     websocket_api.async_register_command(hass, websocket_current_user)
     websocket_api.async_register_command(hass, websocket_create_long_lived_access_token)
@@ -489,6 +501,28 @@ def _create_auth_code_store() -> tuple[StoreResultType, RetrieveResultType]:
         return None
 
     return store_result, retrieve_result
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "auth/add_group",
+        vol.Required("name"): str,
+        vol.Required("entity"): str,
+        vol.Required("read"): bool,
+        vol.Required("control"): bool,
+        vol.Required("edit"): bool,
+    }
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_add_group(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return the current user groups."""
+    await hass.auth.async_add_group(
+        msg["name"], msg["entity"], msg["read"], msg["control"], msg["edit"]
+    )
+    connection.send_message(websocket_api.result_message(msg["id"], "done"))
 
 
 @websocket_api.websocket_command({vol.Required("type"): "auth/current_user_groups"})

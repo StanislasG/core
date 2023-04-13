@@ -204,6 +204,12 @@ class AuthManager:
         """Retrieve all groups."""
         return await self._store.async_get_group(group_id)
 
+    async def async_add_group(
+        self, name: str, entity: str, read: bool, control: bool, edit: bool
+    ) -> models.Group | None:
+        """Add new group."""
+        return await self._store.async_add_group(name, entity, read, control, edit)
+
     async def async_get_user_by_credentials(
         self, credentials: models.Credentials
     ) -> models.User | None:
