@@ -122,8 +122,27 @@ Send websocket command `auth/add_group` will add a group
     "type": "auth/add_group",
 }
 
-send back .... fill in
+The result payload likes
 
+{
+    "done"
+}
+
+
+## Add a new group
+
+Send websocket command `auth/get_users` will retrieve all user name
+
+{
+    "id": 10,
+    "type": "auth/get_users",
+}
+
+The result payload likes
+
+{
+    "users": ["admin", "user1", "user2"]
+}
 
 ## Create a long-lived access token
 
@@ -213,6 +232,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.http.register_view(LinkUserView(retrieve_result))
     hass.http.register_view(OAuth2AuthorizeCallbackView())
 
+    websocket_api.async_register_command(hass, websocket_get_users)
     websocket_api.async_register_command(hass, websocket_add_group)
     websocket_api.async_register_command(hass, websocket_current_user_groups)
     websocket_api.async_register_command(hass, websocket_current_user)
@@ -501,6 +521,24 @@ def _create_auth_code_store() -> tuple[StoreResultType, RetrieveResultType]:
         return None
 
     return store_result, retrieve_result
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "auth/get_users",
+    }
+)
+@websocket_api.async_response
+async def websocket_get_users(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return all the users."""
+    users = await hass.auth.async_get_users()
+    connection.send_message(
+        websocket_api.result_message(
+            msg["id"], {"users": [user.name for user in users]}
+        )
+    )
 
 
 @websocket_api.websocket_command(

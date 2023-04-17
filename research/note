@@ -1,0 +1,42 @@
+# Understand code
+# msg = {'type': 'config/auth_provider/homeassistant/create',
+#     'user_id': 'db377a97e3e64e94af6fd76367c7e774',
+#     'username': 'aa',
+#     'password': 'a',
+#     'id': 37}
+
+# User(name='a',
+#     perm_lookup=PermissionLookup(entity_registry=<homeassistant.helpers.entity_registry.EntityRegistry object at 0x7fc7c404ea40>,
+#     device_registry=<homeassistant.helpers.device_registry.DeviceRegistry object at 0x7fc7c404eb00>),
+#     id='bb40aa9a67ad465e95532dcc1b7caec8',
+#     is_owner=False,
+#     is_active=True,
+#     system_generated=False,
+#     local_only=False,
+#     groups=[Group(name='Users', policy={'entities': True}, id='system-users', system_generated=True)],
+#     credentials=[], refresh_tokens={}, _permissions=None)
+
+
+# async def async_create_group(
+#     self,
+#     name: str,
+#     id: str,
+#     permission: bool | None = None,
+# ) -> models.Group:
+#     """Create a user."""
+#     kwargs: dict[str, Any] = {
+#         "name": name,
+#         "is_active": True,
+#         "group_ids": group_ids or [],
+#         "local_only": local_only,
+#     }
+#     # if await self._user_should_be_owner():
+#     #     kwargs["is_owner"] = True
+#     # user = await self._store.async_create_user(**kwargs)
+#     # self.hass.bus.async_fire(EVENT_USER_ADDED, {"user_id": user.id})
+#     group = Group
+#     return group
+
+
+# OrderedDict([('system-admin', Group(name='Administrators', policy={'entities': True}, id='system-admin', system_generated=True)), ('system-users', Group(name='Users', policy={'entities': True}, id='system-users', system_generated=True)), ('system-read-only', Group(name='Read Only', policy={'entities': {'all': {'read': True}}}, id='system-read-only', system_generated=True)), ('testId', Group(name='testName', policy={'entities': {'entity_ids': {'automation.auto2': {'read': True}, 'input_button.mybutton': {'read': True, 'control': True}, 'counter.mycounter': {'read': True}, 'fan.fan': {'read': True}}}}, id='testId', system_generated=False))])
+# {'id': 'n', 'name': 'n', 'policy': {'entities': {'entity_id': {'i': {'read': True, 'control': False, 'edit': False}}}}}

@@ -11,11 +11,52 @@ from homeassistant.exceptions import Unauthorized
 
 async def async_setup(hass):
     """Enable the Home Assistant views."""
+    # websocket_api.async_register_command(hass, websocket_add_to_group)  # new
     websocket_api.async_register_command(hass, websocket_create)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_change_password)
     websocket_api.async_register_command(hass, websocket_admin_change_password)
     return True
+
+
+# @websocket_api.websocket_command(
+#     {
+#         vol.Required("type"): "config/auth_provider/homeassistant/add_to_group",
+#         vol.Required("user_id"): str,
+#         vol.Required("group_ids"): list,
+#     }
+# )
+# @websocket_api.async_response
+# async def websocket_add_to_group(
+#     hass: HomeAssistant,
+#     connection: websocket_api.ActiveConnection,
+#     msg: dict[str, Any],
+# ) -> None:
+#     """Add user to the group_ids"""
+
+#     # get credential to do so
+#     # provider = auth_ha.async_get_provider(hass)
+
+#     # check if user exists
+#     if (user := await hass.auth.async_get_user(msg["user_id"])) is None:
+#         connection.send_error(msg["id"], "not_found", "User not found")
+#         return
+
+#     # check if all group ids exists
+#     if not msg["group_ids"]:
+#         connection.send_error(msg["id"], "not_found", "Group ids list missing")
+#         return
+
+#     group_id = None
+#     for group_id in msg["group_ids"]:
+#         if (temp := await hass.auth.async_get_group(group_id)) is None:
+#             connection.send_error(msg["id"], "not_found", "Group not found")
+#             return
+
+#     await hass.auth.async_update_user(
+#         user, user.name, user.is_active, msg["group_ids"], user.local_only
+#     )
+#     connection.send_result(msg["id"])
 
 
 @websocket_api.websocket_command(
@@ -50,24 +91,6 @@ async def websocket_create(
         return
 
     user.groups = [group]
-
-    # Understand code
-    # msg = {'type': 'config/auth_provider/homeassistant/create',
-    #     'user_id': 'db377a97e3e64e94af6fd76367c7e774',
-    #     'username': 'aa',
-    #     'password': 'a',
-    #     'id': 37}
-
-    # User(name='a',
-    #     perm_lookup=PermissionLookup(entity_registry=<homeassistant.helpers.entity_registry.EntityRegistry object at 0x7fc7c404ea40>,
-    #     device_registry=<homeassistant.helpers.device_registry.DeviceRegistry object at 0x7fc7c404eb00>),
-    #     id='bb40aa9a67ad465e95532dcc1b7caec8',
-    #     is_owner=False,
-    #     is_active=True,
-    #     system_generated=False,
-    #     local_only=False,
-    #     groups=[Group(name='Users', policy={'entities': True}, id='system-users', system_generated=True)],
-    #     credentials=[], refresh_tokens={}, _permissions=None)
 
     if user.system_generated:
         connection.send_error(
