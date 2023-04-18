@@ -144,6 +144,23 @@ The result payload likes
     "users": ["admin", "user1", "user2"]
 }
 
+## Edit sharing constrains
+
+Send websocket command `auth/edit_intshare`
+
+{
+    "id": 10,
+    "type": "auth/edit_intshare",
+    "entity"; "auto.auto1"
+    "intshare": "1"
+}
+
+The result payload likes
+
+{
+    ... fill in
+}
+
 ## Create a long-lived access token
 
 Send websocket command `auth/long_lived_access_token` will create
@@ -232,6 +249,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.http.register_view(LinkUserView(retrieve_result))
     hass.http.register_view(OAuth2AuthorizeCallbackView())
 
+    websocket_api.async_register_command(hass, websocket_edit_intshare)
     websocket_api.async_register_command(hass, websocket_get_users)
     websocket_api.async_register_command(hass, websocket_add_group)
     websocket_api.async_register_command(hass, websocket_current_user_groups)
@@ -523,11 +541,7 @@ def _create_auth_code_store() -> tuple[StoreResultType, RetrieveResultType]:
     return store_result, retrieve_result
 
 
-@websocket_api.websocket_command(
-    {
-        vol.Required("type"): "auth/get_users",
-    }
-)
+@websocket_api.websocket_command({vol.Required("type"): "auth/get_users"})
 @websocket_api.async_response
 async def websocket_get_users(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
@@ -539,6 +553,24 @@ async def websocket_get_users(
             msg["id"], {"users": [user.name for user in users]}
         )
     )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "auth/edit_intshare",
+        vol.Required("entity"): str,
+        vol.Required("intshare"): str,
+    }
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_edit_intshare(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Edit int share policy."""
+    # print("edit_int in component")
+    await hass.auth.async_edit_intshare(msg["entity"], int(msg["intshare"]))
+    connection.send_message(websocket_api.result_message(msg["id"], "done"))
 
 
 @websocket_api.websocket_command(

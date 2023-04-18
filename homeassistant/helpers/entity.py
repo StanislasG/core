@@ -292,6 +292,10 @@ class Entity(ABC):
     _attr_unique_id: str | None = None
     _attr_unit_of_measurement: str | None
 
+    # add for share
+    _attr_int_share: int | None
+    _attr_float_share: int | None
+
     @property
     def should_poll(self) -> bool:
         """Return True if entity has to be polled for state.

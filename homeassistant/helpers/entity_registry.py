@@ -150,6 +150,16 @@ class RegistryEntry:
     _display_repr: str | None | UndefinedType = attr.ib(
         cmp=False, default=UNDEFINED, init=False, repr=False
     )
+    # Added for Sharing purposes
+    sharing_users_int: int | None = attr.ib(default=None)
+    sharing_users_float: float | None = attr.ib(default=None)
+
+    @property
+    def shareable(self) -> bool:
+        """Return if can shared."""
+        return (self.sharing_users_int is not None) or (
+            self.sharing_users_float is not None
+        )
 
     @domain.default
     def _domain_default(self) -> str:
@@ -548,8 +558,13 @@ class EntityRegistry:
         supported_features: int | None | UndefinedType = UNDEFINED,
         translation_key: str | None | UndefinedType = UNDEFINED,
         unit_of_measurement: str | None | UndefinedType = UNDEFINED,
+        # Added for Sharing purposes
+        # sharing_users_int: int | None | UndefinedType = UNDEFINED,
+        # sharing_users_float: float | None | UndefinedType = UNDEFINED,
     ) -> RegistryEntry:
         """Get entity. Create if it doesn't exist."""
+
+        # print("in async_get_or_create", locals().keys())
         config_entry_id: str | None | UndefinedType = UNDEFINED
         if not config_entry:
             config_entry_id = None
@@ -574,6 +589,9 @@ class EntityRegistry:
                 supported_features=supported_features,
                 translation_key=translation_key,
                 unit_of_measurement=unit_of_measurement,
+                # Added for Sharing purposes
+                # sharing_users_int=sharing_users_int,
+                # sharing_users_float=sharing_users_float,
             )
 
         entity_id = self.async_generate_entity_id(
@@ -624,6 +642,9 @@ class EntityRegistry:
             translation_key=none_if_undefined(translation_key),
             unique_id=unique_id,
             unit_of_measurement=none_if_undefined(unit_of_measurement),
+            # Added for Sharing purposes, none if undefines?
+            # sharing_users_int=none_if_undefined(sharing_users_int),
+            # sharing_users_float=none_if_undefined(sharing_users_float),
         )
         self.entities[entity_id] = entry
         _LOGGER.info("Registered new %s.%s entity: %s", domain, platform, entity_id)
@@ -736,8 +757,14 @@ class EntityRegistry:
         supported_features: int | UndefinedType = UNDEFINED,
         translation_key: str | None | UndefinedType = UNDEFINED,
         unit_of_measurement: str | None | UndefinedType = UNDEFINED,
+        # Added for Sharing purposes
+        sharing_users_int: int | None | UndefinedType = UNDEFINED,
+        sharing_users_float: float | None | UndefinedType = UNDEFINED,
     ) -> RegistryEntry:
         """Private facing update properties method."""
+        # print(
+        #     "in _async_update_entity", entity_id, sharing_users_int, locals().get("arg")
+        # )
         old = self.entities[entity_id]
 
         new_values: dict[str, Any] = {}  # Dict with new key/value pairs
@@ -784,6 +811,8 @@ class EntityRegistry:
             ("supported_features", supported_features),
             ("translation_key", translation_key),
             ("unit_of_measurement", unit_of_measurement),
+            ("sharing_users_int", sharing_users_int),
+            ("sharing_users_float", sharing_users_float),
         ):
             if value is not UNDEFINED and value != getattr(old, attr_name):
                 new_values[attr_name] = value
@@ -860,6 +889,9 @@ class EntityRegistry:
         supported_features: int | UndefinedType = UNDEFINED,
         translation_key: str | None | UndefinedType = UNDEFINED,
         unit_of_measurement: str | None | UndefinedType = UNDEFINED,
+        # Added for Sharing purposes
+        sharing_users_int: int | None | UndefinedType = UNDEFINED,
+        sharing_users_float: float | None | UndefinedType = UNDEFINED,
     ) -> RegistryEntry:
         """Update properties of an entity."""
         return self._async_update_entity(
@@ -884,6 +916,9 @@ class EntityRegistry:
             supported_features=supported_features,
             translation_key=translation_key,
             unit_of_measurement=unit_of_measurement,
+            # Added for Sharing purposes
+            sharing_users_int=sharing_users_int,
+            sharing_users_float=sharing_users_float,
         )
 
     @callback
@@ -980,6 +1015,8 @@ class EntityRegistry:
                     translation_key=entity["translation_key"],
                     unique_id=entity["unique_id"],
                     unit_of_measurement=entity["unit_of_measurement"],
+                    sharing_users_int=entity["sharing_users_int"],
+                    sharing_users_float=entity["sharing_users_float"],
                 )
 
         self.entities = entities
@@ -1019,6 +1056,9 @@ class EntityRegistry:
                 "translation_key": entry.translation_key,
                 "unique_id": entry.unique_id,
                 "unit_of_measurement": entry.unit_of_measurement,
+                # Added for Sharing purposes
+                "sharing_users_int": entry.sharing_users_int,
+                "sharing_users_float": entry.sharing_users_float,
             }
             for entry in self.entities.values()
         ]

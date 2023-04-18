@@ -1528,6 +1528,7 @@ class StateMachine:
         entity_id = entity_id.lower()
         new_state = str(new_state)
         attributes = attributes or {}
+        # print('gdfs')
         if (old_state := self._states.get(entity_id)) is None:
             same_state = False
             same_attr = False
@@ -1536,7 +1537,7 @@ class StateMachine:
             same_state = old_state.state == new_state and not force_update
             same_attr = old_state.attributes == attributes
             last_changed = old_state.last_changed if same_state else None
-
+        # print('kjkljds')
         if same_state and same_attr:
             return
 
