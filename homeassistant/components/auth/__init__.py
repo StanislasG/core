@@ -144,7 +144,7 @@ The result payload likes
     "users": ["admin", "user1", "user2"]
 }
 
-## Edit sharing constrains
+## Edit sharing constrains (not working see attributes)
 
 Send websocket command `auth/edit_intshare`
 
@@ -249,7 +249,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.http.register_view(LinkUserView(retrieve_result))
     hass.http.register_view(OAuth2AuthorizeCallbackView())
 
-    websocket_api.async_register_command(hass, websocket_edit_intshare)
+    # websocket_api.async_register_command(hass, websocket_get_intshare)
+    # websocket_api.async_register_command(hass, websocket_edit_intshare)
     websocket_api.async_register_command(hass, websocket_get_users)
     websocket_api.async_register_command(hass, websocket_add_group)
     websocket_api.async_register_command(hass, websocket_current_user_groups)
@@ -555,22 +556,41 @@ async def websocket_get_users(
     )
 
 
-@websocket_api.websocket_command(
-    {
-        vol.Required("type"): "auth/edit_intshare",
-        vol.Required("entity"): str,
-        vol.Required("intshare"): str,
-    }
-)
-@websocket_api.ws_require_user()
-@websocket_api.async_response
-async def websocket_edit_intshare(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
-) -> None:
-    """Edit int share policy."""
-    # print("edit_int in component")
-    await hass.auth.async_edit_intshare(msg["entity"], int(msg["intshare"]))
-    connection.send_message(websocket_api.result_message(msg["id"], "done"))
+# @websocket_api.websocket_command(
+#     {
+#         vol.Required("type"): "auth/edit_intshare",
+#         vol.Required("entity"): str,
+#         vol.Required("intshare"): str,
+#     }
+# )
+# @websocket_api.ws_require_user()
+# @websocket_api.async_response
+# async def websocket_edit_intshare(
+#     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+# ) -> None:
+#     """Edit int share policy."""
+#     # print("edit_int in component")
+#     await hass.auth.async_edit_intshare(msg["entity"], int(msg["intshare"]))
+#     connection.send_message(websocket_api.result_message(msg["id"], "done"))
+
+
+# @websocket_api.websocket_command(
+#     {
+#         vol.Required("type"): "auth/get_intshare",
+#         vol.Required("entity"): str,
+#     }
+# )
+# @websocket_api.ws_require_user()
+# @websocket_api.async_response
+# async def websocket_get_intshare(
+#     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+# ) -> None:
+#     """get int share policy."""
+#     # print("edit_int in component")
+#     response = await hass.auth.async_get_intshare(msg["entity"])
+#     connection.send_message(
+#         websocket_api.result_message(msg["id"], {"intshare": response})
+#     )
 
 
 @websocket_api.websocket_command(

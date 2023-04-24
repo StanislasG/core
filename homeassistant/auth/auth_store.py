@@ -109,12 +109,21 @@ class AuthStore:
             self._async_schedule_save_groups()
         return None
 
-    async def async_edit_intshare(self, entity: str, intshare: int) -> None:
-        """Edit intshare policy for specified entity."""
-        # print("edit_int in auth", entity, intshare)
-        self.hass.states.async_set(entity, "changedState", {"intshare": intshare})
+        # async def async_edit_intshare(self, entity: str, intshare: int) -> None:
+        #     """Edit intshare policy for specified entity."""
+        #     # print("edit_int in auth", entity, intshare)
+        #     self.hass.states.async_set(
+        #         entity, "changedState", {"friendly_name": str(intshare)}
+        #     )
+
         # print("after edit_int in auth", entity, intshare)
-        return None
+        # return None
+
+    # async def async_get_intshare(self, entity: str) -> str | None:
+    #     """Edit intshare policy for specified entity."""
+    #     # print("edit_int in auth", entity, intshare)
+    #     return self.hass.states.get(entity).name
+    #     # print("after edit_int in auth", entity, intshare)
 
     async def async_create_user(
         self,

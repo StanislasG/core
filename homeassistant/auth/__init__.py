@@ -210,11 +210,16 @@ class AuthManager:
         """Add new group."""
         return await self._store.async_add_group(name, entity, read, control, edit)
 
-    async def async_edit_intshare(self, entity: str, intshare: int) -> None:
-        """Add new group."""
-        # print("edit_int in auth init")
-        await self._store.async_edit_intshare(entity, intshare)
-        return None
+    # async def async_edit_intshare(self, entity: str, intshare: int) -> None:
+    #     """Add new group."""
+    #     # print("edit_int in auth init")
+    #     await self._store.async_edit_intshare(entity, intshare)
+    #     return None
+
+    # async def async_get_intshare(self, entity: str) -> str | None:
+    #     """Add new group."""
+    #     # print("edit_int in auth init")
+    #     return await self._store.async_get_intshare(entity)
 
     async def async_get_user_by_credentials(
         self, credentials: models.Credentials
