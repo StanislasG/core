@@ -210,6 +210,17 @@ class AuthManager:
         """Add new group."""
         return await self._store.async_add_group(name, entity, read, control, edit)
 
+    async def async_get_users_having_permission(
+        self, entity_id: str, key: str
+    ) -> list[models.User]:
+        """Get users having permission."""
+        users: list[models.User] = await self.async_get_users()
+        user_with_permission: list[models.User] = []
+        for user in users:
+            if user.permissions.check_entity(entity_id, key):
+                user_with_permission.append(user)
+        return user_with_permission
+
     # async def async_edit_intshare(self, entity: str, intshare: int) -> None:
     #     """Add new group."""
     #     # print("edit_int in auth init")

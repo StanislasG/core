@@ -251,6 +251,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     # websocket_api.async_register_command(hass, websocket_get_intshare)
     # websocket_api.async_register_command(hass, websocket_edit_intshare)
+    websocket_api.async_register_command(hass, websocket_get_users_having_permission)
     websocket_api.async_register_command(hass, websocket_get_users)
     websocket_api.async_register_command(hass, websocket_add_group)
     websocket_api.async_register_command(hass, websocket_current_user_groups)
@@ -549,6 +550,27 @@ async def websocket_get_users(
 ) -> None:
     """Return all the users."""
     users = await hass.auth.async_get_users()
+    connection.send_message(
+        websocket_api.result_message(
+            msg["id"], {"users": [user.name for user in users]}
+        )
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "auth/get_users_having_permission",
+        vol.Required("entity"): str,
+        vol.Required("key"): str,
+    }
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_get_users_having_permission(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Get users having permission."""
+    users = await hass.auth.async_get_users_having_permission(msg["entity"], msg["key"])
     connection.send_message(
         websocket_api.result_message(
             msg["id"], {"users": [user.name for user in users]}
