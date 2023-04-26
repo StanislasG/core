@@ -26,8 +26,11 @@ ENTITY_DOMAINS = "domains"
 ENTITY_AREAS = "area_ids"
 ENTITY_DEVICE_IDS = "device_ids"
 ENTITY_ENTITY_IDS = "entity_ids"
+GROUP_IDS = "group_ids"
 
 ENTITY_VALUES_SCHEMA = vol.Any(True, vol.Schema({str: SINGLE_ENTITY_SCHEMA}))
+
+GROUP_SCHEMA = vol.Schema({str: list[str]})
 
 ENTITY_POLICY_SCHEMA = vol.Any(
     True,
@@ -38,6 +41,7 @@ ENTITY_POLICY_SCHEMA = vol.Any(
             vol.Optional(ENTITY_DEVICE_IDS): ENTITY_VALUES_SCHEMA,
             vol.Optional(ENTITY_DOMAINS): ENTITY_VALUES_SCHEMA,
             vol.Optional(ENTITY_ENTITY_IDS): ENTITY_VALUES_SCHEMA,
+            vol.Optional(GROUP_IDS): GROUP_SCHEMA,
         }
     ),
 )

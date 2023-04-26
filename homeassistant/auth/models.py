@@ -13,6 +13,7 @@ from homeassistant.util import dt as dt_util
 
 from . import permissions as perm_mdl
 from .const import GROUP_ID_ADMIN
+from .permissions.types import PolicyType
 
 TOKEN_TYPE_NORMAL = "normal"
 TOKEN_TYPE_SYSTEM = "system"
@@ -27,6 +28,8 @@ class Group:
     policy: perm_mdl.PolicyType = attr.ib()
     id: str = attr.ib(factory=lambda: uuid.uuid4().hex)
     system_generated: bool = attr.ib(default=False)
+    group_ids: list[str] = attr.ib(factory=list, eq=False, order=False)
+    group_ids_obj: list[Group] = attr.ib(factory=list, eq=False, order=False)
 
 
 @attr.s(slots=True)
@@ -68,11 +71,26 @@ class User:
             return self._permissions
 
         self._permissions = perm_mdl.PolicyPermissions(
-            perm_mdl.merge_policies([group.policy for group in self.groups]),
+            perm_mdl.merge_policies(
+                [self.find_policy_from_group(group) for group in self.groups]
+            ),
             self.perm_lookup,
         )
 
         return self._permissions
+
+    def find_policy_from_group(self, group: Group) -> PolicyType:
+        """Return recursive Policies."""
+        curr: PolicyType = group.policy
+        hiertitage: list[PolicyType] = []
+        if len(group.group_ids) > 0:
+            for group_id_obj in group.group_ids_obj:
+                new: PolicyType = self.find_policy_from_group(group_id_obj)
+                hiertitage.append(new)
+        total: list[PolicyType] = hiertitage + ([curr] if curr is not None else [])
+        if len(total) > 0:
+            return perm_mdl.merge_policies(total)
+        return None
 
     @property
     def is_admin(self) -> bool:

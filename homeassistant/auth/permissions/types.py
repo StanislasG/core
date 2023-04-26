@@ -24,5 +24,6 @@ CategoryType = (
     | None
 )
 
-# Example: { entities: … }
-PolicyType = Mapping[str, CategoryType]
+GroupList = Mapping[str, list[str]]
+# Example: { entities: … } & {group_ids: []}
+PolicyType = Mapping[str, CategoryType] | GroupList | None

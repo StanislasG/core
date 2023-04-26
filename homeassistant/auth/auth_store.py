@@ -377,7 +377,8 @@ class AuthStore:
         has_admin_group = False
         has_user_group = False
         has_read_only_group = False
-        group_without_policy = None
+        group_ids = []
+        group_ids_obj = []
 
         # When creating objects we mention each attribute explicitly. This
         # prevents crashing if user rolls back HA version after a new property
@@ -412,29 +413,37 @@ class AuthStore:
                 policy = group_dict.get("policy")
                 system_generated = False
 
+            if "group_ids" in group_dict:
+                group_ids = group_dict["group_ids"]
+
+                for _idx, group_id in enumerate(group_dict["group_ids"]):
+                    group_ids_obj.append(groups[group_id])
+
             # We don't want groups without a policy that are not system groups
             # This is part of migrating from state 1
-            if policy is None:
-                group_without_policy = group_dict["id"]
-                continue
+            # elif policy is None:
+            #     group_without_policy = group_dict["id"]
+            #     continue
 
             groups[group_dict["id"]] = models.Group(
                 id=group_dict["id"],
                 name=name,
                 policy=policy,
                 system_generated=system_generated,
+                group_ids=group_ids,
+                group_ids_obj=group_ids_obj,
             )
 
         # If there are no groups, add all existing users to the admin group.
         # This is part of migrating from state 2
-        migrate_users_to_admin_group = not groups and group_without_policy is None
+        # migrate_users_to_admin_group = not groups and group_without_policy is None
 
         # If we find a no_policy_group, we need to migrate all users to the
         # admin group. We only do this if there are no other groups, as is
         # the expected state. If not expected state, not marking people admin.
         # This is part of migrating from state 1
-        if groups and group_without_policy is not None:
-            group_without_policy = None
+        # if groups and group_without_policy is not None:
+        #     group_without_policy = None
 
         # This is part of migrating from state 1 and 2
         if not has_admin_group:
@@ -455,13 +464,13 @@ class AuthStore:
             user_groups = []
             for group_id in user_dict.get("group_ids", []):
                 # This is part of migrating from state 1
-                if group_id == group_without_policy:
-                    group_id = GROUP_ID_ADMIN
+                # if group_id == group_without_policy:
+                #     group_id = GROUP_ID_ADMIN
                 user_groups.append(groups[group_id])
 
             # This is part of migrating from state 2
-            if not user_dict["system_generated"] and migrate_users_to_admin_group:
-                user_groups.append(groups[GROUP_ID_ADMIN])
+            # if not user_dict["system_generated"] and migrate_users_to_admin_group:
+            #     user_groups.append(groups[GROUP_ID_ADMIN])
 
             users[user_dict["id"]] = models.User(
                 name=user_dict["name"],
@@ -584,6 +593,7 @@ class AuthStore:
 
             if not group.system_generated:
                 g_dict["policy"] = group.policy
+                g_dict["group_ids"] = group.group_ids
 
             groups.append(g_dict)
 
