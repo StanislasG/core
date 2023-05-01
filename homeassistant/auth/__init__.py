@@ -195,6 +195,10 @@ class AuthManager:
         """Retrieve a user."""
         return await self._store.async_get_user(user_id)
 
+    async def async_get_user_by_name(self, user_name: str) -> models.User | None:
+        """Retrieve user by name."""
+        return await self._store.async_get_user_by_name(user_name)
+
     async def async_get_owner(self) -> models.User | None:
         """Retrieve the owner."""
         users = await self.async_get_users()
@@ -210,6 +214,7 @@ class AuthManager:
         """Add new group."""
         return await self._store.async_add_group(name, entity, read, control, edit)
 
+    # check if change
     async def async_get_users_having_permission(
         self, entity_id: str, key: str
     ) -> list[models.User]:
@@ -220,6 +225,26 @@ class AuthManager:
             if user.permissions.check_entity(entity_id, key):
                 user_with_permission.append(user)
         return user_with_permission
+
+    async def async_add_decision(
+        self, source: str, target: str, group: str, action: str
+    ) -> None:
+        """Add decision."""
+        return await self._store.async_add_decision(source, target, group, action)
+
+    async def async_vote_decision(
+        self,
+        source: str,
+        target: str,
+        group: str,
+        action: str,
+        vote: bool,
+        origin_user: str,
+    ) -> None:
+        """Vote decision."""
+        return await self._store.async_vote_decision(
+            source, target, group, action, vote, origin_user
+        )
 
     # async def async_edit_intshare(self, entity: str, intshare: int) -> None:
     #     """Add new group."""

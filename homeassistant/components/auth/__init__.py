@@ -253,6 +253,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     # websocket_api.async_register_command(hass, websocket_edit_intshare)
     websocket_api.async_register_command(hass, websocket_get_users_having_permission)
     websocket_api.async_register_command(hass, websocket_get_users)
+    websocket_api.async_register_command(hass, websocket_add_decision)
+    websocket_api.async_register_command(hass, websocket_vote_decision)
     websocket_api.async_register_command(hass, websocket_add_group)
     websocket_api.async_register_command(hass, websocket_current_user_groups)
     websocket_api.async_register_command(hass, websocket_current_user)
@@ -576,6 +578,55 @@ async def websocket_get_users_having_permission(
             msg["id"], {"users": [user.name for user in users]}
         )
     )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "auth/add_decision",
+        vol.Required("source"): str,
+        vol.Required("target"): str,
+        vol.Required("group"): str,
+        vol.Required("action"): str,
+    }
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_add_decision(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Add decision."""
+    await hass.auth.async_add_decision(
+        msg["source"], msg["target"], msg["group"], msg["action"]
+    )
+    connection.send_message(websocket_api.result_message(msg["id"], "ok"))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "auth/vote_decision",
+        vol.Required("source"): str,
+        vol.Required("target"): str,
+        vol.Required("group"): str,
+        vol.Required("action"): str,
+        vol.Required("vote"): bool,
+        vol.Required("origin_user"): str,
+    }
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_vote_decision(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Add decision."""
+    await hass.auth.async_vote_decision(
+        msg["source"],
+        msg["target"],
+        msg["group"],
+        msg["action"],
+        msg["vote"],
+        msg["origin_user"],
+    )
+    connection.send_message(websocket_api.result_message(msg["id"], "ok"))
 
 
 # @websocket_api.websocket_command(

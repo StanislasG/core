@@ -61,6 +61,8 @@ class User:
         default=None,
     )
 
+    decisions: list[Decision] = attr.ib(factory=list, eq=False, order=False)
+
     @property
     def permissions(self) -> perm_mdl.AbstractPermissions:
         """Return permissions object for user."""
@@ -152,3 +154,16 @@ class UserMeta(NamedTuple):
 
     name: str | None
     is_active: bool
+
+
+@attr.s(slots=True)
+class Decision:
+    """Decision."""
+
+    source: str = attr.ib()  # id user/group
+    target: str = attr.ib()  # id user/group
+    group: str = attr.ib()
+    action: str = attr.ib()
+    reject: list[str] = attr.ib(factory=list, eq=False, order=False)
+    approve: list[str] = attr.ib(factory=list, eq=False, order=False)
+    result: bool = attr.ib(default=None)

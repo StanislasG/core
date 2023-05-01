@@ -83,6 +83,26 @@ class AuthStore:
 
         return self._users.get(user_id)
 
+    async def async_get_user_by_name(self, user_name: str) -> models.User | None:
+        """Retrieve a user by name."""
+        users = await self.async_get_users()
+        # if users is None:
+        #     return None
+        for user in users:
+            if user.name == user_name:
+                return user
+        return None
+
+    async def async_add_user_to_group(
+        self, user: str, group: models.Group
+    ) -> models.User | None:
+        """Add user to group."""
+        _user = await self.async_get_user_by_name(user)
+        if _user is not None:
+            _user.groups.append(group)
+        self._async_schedule_save()
+        return _user
+
     async def async_add_group(
         self, name: str, entity: str, read: bool, control: bool, edit: bool
     ) -> models.Group | None:
@@ -107,7 +127,7 @@ class AuthStore:
         if isinstance(new_group, models.Group):
             self._groups[new_group.id] = new_group
             self._async_schedule_save_groups()
-        return None
+        return new_group
 
         # async def async_edit_intshare(self, entity: str, intshare: int) -> None:
         #     """Edit intshare policy for specified entity."""
@@ -224,6 +244,88 @@ class AuthStore:
                 setattr(user, attr_name, value)
 
         self._async_schedule_save()
+
+    async def async_get_users_having_permission(
+        self, group_id: str
+    ) -> list[models.User]:
+        """Get users having permission."""
+        await self.async_get_users()
+        # if users is None:
+        #     return []
+        user_with_permission: list[models.User] = []
+        # for user in users:
+        # check if access to group
+        #     continue
+        return user_with_permission
+
+    async def async_add_decision(
+        self, source_user: str, target: str, group: str, action: str
+    ) -> None:
+        """Add voting process to give access to target."""
+        user = await self.async_get_user_by_name(source_user)
+        if user is None:
+            return None
+
+        # check if has right to access (member of DM)
+        decision: models.Decision = models.Decision(source_user, target, group, action)
+        user.decisions.append(decision)
+        self._async_schedule_save()
+
+    async def async_get_decision(
+        self, source_user: str, target: str, group: str, action: str
+    ) -> models.Decision | None:
+        """Get decision."""
+        user = await self.async_get_user_by_name(source_user)
+        if user is None:
+            return None
+        decisions = user.decisions
+        for decision in decisions:
+            if (
+                decision.source == source_user
+                and decision.target == target
+                and decision.group == group
+                and decision.action == action
+            ):
+                return decision
+        return None
+
+    async def async_vote_decision(
+        self,
+        source_user: str,
+        target: str,
+        group: str,
+        action: str,
+        vote: bool,
+        origin_user: str,
+    ) -> None:
+        """Vote decision."""
+        temp = await self.async_get_decision(source_user, target, group, action)
+        if temp is None:
+            return None
+        # check if has right to access (member of DM)
+        decision: models.Decision = temp
+        if vote:
+            decision.approve.append(origin_user)
+        else:
+            decision.reject.append(origin_user)
+        # check result
+
+        self._async_schedule_save()
+        return None
+
+    async def async_decision_checker(
+        self, source_user: str, target: str, group: str, action: str
+    ) -> None:
+        """Check decision."""
+        # self.async_get_decision(source_user, target, action)
+        # if decision is None:
+        #     return None
+        # check decision
+        # first find all voters
+        # second compute threshold
+        # third set result if needed
+        # forth add group to member if needed
+        return None
 
     async def async_activate_user(self, user: models.User) -> None:
         """Activate a user."""
@@ -545,6 +647,20 @@ class AuthStore:
                 token.credential = credentials.get(rt_dict["credential_id"])
             users[rt_dict["user_id"]].refresh_tokens[token.id] = token
 
+        for decision_dict in data["decisions"]:
+            decision = models.Decision(
+                decision_dict["source"],
+                decision_dict["target"],
+                decision_dict["group"],
+                decision_dict["action"],
+                decision_dict["reject"],
+                decision_dict["approve"],
+                decision_dict["result"],
+            )
+
+            for user in users:
+                if users[user].name == decision_dict["source"]:
+                    users[user].decisions.append(decision)
         self._groups = groups
         self._users = users
 
@@ -636,11 +752,26 @@ class AuthStore:
             for refresh_token in user.refresh_tokens.values()
         ]
 
+        decisions = [
+            {
+                "source": decision.source,
+                "target": decision.target,
+                "group": decision.group,
+                "action": decision.action,
+                "reject": decision.reject,
+                "approve": decision.approve,
+                "result": decision.result,
+            }
+            for user in self._users.values()
+            for decision in user.decisions
+        ]
+
         return {
             "users": users,
             "groups": groups,
             "credentials": credentials,
             "refresh_tokens": refresh_tokens,
+            "decisions": decisions,
         }
 
     def _set_defaults(self) -> None:
