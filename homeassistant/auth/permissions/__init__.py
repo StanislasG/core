@@ -30,8 +30,13 @@ class AbstractPermissions:
     """Default permissions class."""
 
     _cached_entity_func: Callable[[str, str], bool] | None = None
+    # _cached_group_func: Callable[[str], bool] | None = None
 
     def _entity_func(self) -> Callable[[str, str], bool]:
+        """Return a function that can test entity access."""
+        raise NotImplementedError
+
+    def _group_func(self, group_id: str) -> bool:
         """Return a function that can test entity access."""
         raise NotImplementedError
 
@@ -45,6 +50,13 @@ class AbstractPermissions:
             entity_func = self._cached_entity_func = self._entity_func()
 
         return entity_func(entity_id, key)
+
+    def check_group(self, group_id: str) -> bool:
+        """Check if we can access entity."""
+        # if (group_func := self._cached_group_func) is None:
+        #     group_func = self._cached_group_func = self._group_func()
+
+        return self._group_func(group_id)
 
 
 class PolicyPermissions(AbstractPermissions):
@@ -66,6 +78,11 @@ class PolicyPermissions(AbstractPermissions):
     def __eq__(self, other: Any) -> bool:
         """Equals check."""
         return isinstance(other, PolicyPermissions) and other._policy == self._policy
+
+    def _group_func(self, group_id: str) -> bool:
+        """Return a function that can test entity access."""
+        # check for groups in _policy
+        return self.check_group(group_id)
 
 
 class _OwnerPermissions(AbstractPermissions):

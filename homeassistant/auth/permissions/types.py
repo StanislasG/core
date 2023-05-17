@@ -7,6 +7,7 @@ ValueType = (
     # Example: entities.all = { read: true, control: true }
     Mapping[str, bool]
     | bool
+    | list[str]
     | None
 )
 
@@ -24,6 +25,6 @@ CategoryType = (
     | None
 )
 
-GroupList = Mapping[str, list[str]]
+# GroupList = Mapping[str, list[str]]
 # Example: { entities: … } & {group_ids: []}
-PolicyType = Mapping[str, CategoryType] | GroupList | None
+PolicyType = Mapping[str, CategoryType]  # | GroupList | None

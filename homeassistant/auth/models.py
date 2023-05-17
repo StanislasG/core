@@ -84,15 +84,20 @@ class User:
     def find_policy_from_group(self, group: Group) -> PolicyType:
         """Return recursive Policies."""
         curr: PolicyType = group.policy
+
         hiertitage: list[PolicyType] = []
         if len(group.group_ids) > 0:
             for group_id_obj in group.group_ids_obj:
                 new: PolicyType = self.find_policy_from_group(group_id_obj)
-                hiertitage.append(new)
-        total: list[PolicyType] = hiertitage + ([curr] if curr is not None else [])
+                hiertitage.append({"entities": new["entities"]})
+        total: list[PolicyType] = hiertitage + (
+            [{"entities": curr["entities"]}]
+            if curr is not None and "entities" in curr
+            else []
+        )
         if len(total) > 0:
             return perm_mdl.merge_policies(total)
-        return None
+        return {"None": None}
 
     @property
     def is_admin(self) -> bool:
@@ -167,3 +172,4 @@ class Decision:
     reject: list[str] = attr.ib(factory=list, eq=False, order=False)
     approve: list[str] = attr.ib(factory=list, eq=False, order=False)
     result: bool = attr.ib(default=None)
+    policy: PolicyType | None = attr.ib(default=None)

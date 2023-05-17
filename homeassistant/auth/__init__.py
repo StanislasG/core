@@ -17,6 +17,7 @@ from homeassistant.util import dt as dt_util
 from . import auth_store, models
 from .const import ACCESS_TOKEN_EXPIRATION, GROUP_ID_ADMIN
 from .mfa_modules import MultiFactorAuthModule, auth_mfa_module_from_config
+from .permissions import PolicyType
 from .providers import AuthProvider, LoginFlow, auth_provider_from_config
 
 EVENT_USER_ADDED = "user_added"
@@ -214,6 +215,48 @@ class AuthManager:
         """Add new group."""
         return await self._store.async_add_group(name, entity, read, control, edit)
 
+    async def async_add_dg(self, name: str) -> None:
+        """Add new group."""
+        await self._store.async_add_dg(name)
+        return None
+
+    async def async_add_dt(self, name: str) -> None:
+        """Add new group."""
+        await self._store.async_add_dt(name)
+        return None
+
+    async def async_add_dm(self, name: str) -> None:
+        """Add new group."""
+        await self._store.async_add_dm(name)
+        return None
+
+    async def async_edit_policy(
+        self, group_id: str, source_user: str, policy: PolicyType
+    ) -> None:
+        """Add new group."""
+        await self._store.async_edit_policy(group_id, source_user, policy)
+        return None
+
+    async def async_append_group_ids(self, group: str, group_target: str) -> None:
+        """RDRA and RH and DMRA and DT assignment and DMDTA."""
+        return await self._store.async_append_group_ids(group, group_target)
+
+    async def async_remove_group_ids(self, group: str, group_target: str) -> None:
+        """RDRA and RH and DMRA and DT assignment and DMDTA."""
+        return await self._store.async_remove_group_ids(group, group_target)
+
+    async def async_append_group_ids_to_users(
+        self, user: str, group_target: str
+    ) -> None:
+        """UA."""
+        return await self._store.async_append_group_ids_to_users(user, group_target)
+
+    async def async_remove_group_ids_to_users(
+        self, user: str, group_target: str
+    ) -> None:
+        """UA."""
+        return await self._store.async_remove_group_ids_to_users(user, group_target)
+
     # check if change
     async def async_get_users_having_permission(
         self, entity_id: str, key: str
@@ -225,6 +268,16 @@ class AuthManager:
             if user.permissions.check_entity(entity_id, key):
                 user_with_permission.append(user)
         return user_with_permission
+
+    async def async_get_users_having_permission_group(
+        self, group_id: str
+    ) -> list[models.User]:
+        """Get users having permission."""
+        return await self._store.async_get_users_having_permission_group(group_id)
+
+    async def async_get_users_member_of_dm(self, group_id: str) -> list[models.User]:
+        """Get users having permission."""
+        return await self._store.async_get_users_member_of_dm(group_id)
 
     async def async_add_decision(
         self, source: str, target: str, group: str, action: str

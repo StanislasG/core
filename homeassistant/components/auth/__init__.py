@@ -208,6 +208,7 @@ from homeassistant.auth.models import (
     Credentials,
     User,
 )
+from homeassistant.auth.permissions import PolicyType
 from homeassistant.components import websocket_api
 from homeassistant.components.http.auth import (
     async_sign_path,
@@ -252,6 +253,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     # websocket_api.async_register_command(hass, websocket_get_intshare)
     # websocket_api.async_register_command(hass, websocket_edit_intshare)
     websocket_api.async_register_command(hass, websocket_get_users_having_permission)
+    websocket_api.async_register_command(
+        hass, websocket_get_users_having_permission_group
+    )
+    websocket_api.async_register_command(hass, websocket_add_dg)
+    websocket_api.async_register_command(hass, websocket_add_dt)
+    websocket_api.async_register_command(hass, websocket_add_dm)
+    websocket_api.async_register_command(hass, websocket_edit_policy)
     websocket_api.async_register_command(hass, websocket_get_users)
     websocket_api.async_register_command(hass, websocket_add_decision)
     websocket_api.async_register_command(hass, websocket_vote_decision)
@@ -561,6 +569,57 @@ async def websocket_get_users(
 
 @websocket_api.websocket_command(
     {
+        vol.Required("type"): "auth/append_group_ids",
+        vol.Required("source"): str,
+        vol.Required("target"): str,
+    }
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_append_group_ids(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Append group ids."""
+    await hass.auth.async_append_group_ids(msg["source"], msg["target"])
+    connection.send_message(websocket_api.result_message(msg["id"], "ok"))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "auth/append_group_ids_users",
+        vol.Required("source"): str,
+        vol.Required("target"): str,
+    }
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_append_group_ids_to_users(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Append group ids to users."""
+    await hass.auth.async_append_group_ids_to_users(msg["source"], msg["target"])
+    connection.send_message(websocket_api.result_message(msg["id"], "ok"))
+
+
+# @websocket_api.websocket_command(
+#     {
+#         vol.Required("type"): "auth/add_group_dm",
+#         vol.Required("source"): str,
+#         vol.Required("entity"): str,
+#     }
+# )
+# @websocket_api.ws_require_user()
+# @websocket_api.async_response
+# async def websocket_append_group_ids_to_users(
+#     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+# ) -> None:
+#     """Append group ids to users."""
+#     await hass.auth.async_add_dg(msg["source"], msg["entity"])
+#     connection.send_message(websocket_api.result_message(msg["id"], "ok"))
+
+
+@websocket_api.websocket_command(
+    {
         vol.Required("type"): "auth/get_users_having_permission",
         vol.Required("entity"): str,
         vol.Required("key"): str,
@@ -573,6 +632,26 @@ async def websocket_get_users_having_permission(
 ) -> None:
     """Get users having permission."""
     users = await hass.auth.async_get_users_having_permission(msg["entity"], msg["key"])
+    connection.send_message(
+        websocket_api.result_message(
+            msg["id"], {"users": [user.name for user in users]}
+        )
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "auth/get_users_having_permission_group",
+        vol.Required("group"): str,
+    }
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_get_users_having_permission_group(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Get users having permission."""
+    users = await hass.auth.async_get_users_having_permission_group(msg["group"])
     connection.send_message(
         websocket_api.result_message(
             msg["id"], {"users": [user.name for user in users]}
@@ -684,6 +763,65 @@ async def websocket_add_group(
     """Return the current user groups."""
     await hass.auth.async_add_group(
         msg["name"], msg["entity"], msg["read"], msg["control"], msg["edit"]
+    )
+    connection.send_message(websocket_api.result_message(msg["id"], "done"))
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "auth/add_dg", vol.Required("name"): str}
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_add_dg(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return the current user groups."""
+    await hass.auth.async_add_dg(msg["name"])
+    connection.send_message(websocket_api.result_message(msg["id"], "done"))
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "auth/add_dm", vol.Required("name"): str}
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_add_dm(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return the current user groups."""
+    await hass.auth.async_add_dm(msg["name"])
+    connection.send_message(websocket_api.result_message(msg["id"], "done"))
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "auth/add_dt", vol.Required("name"): str}
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_add_dt(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return the current user groups."""
+    await hass.auth.async_add_dt(msg["name"])
+    connection.send_message(websocket_api.result_message(msg["id"], "done"))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "auth/edit_policy",
+        vol.Required("group_id"): str,
+        vol.Required("source_user"): str,
+        vol.Required("policy"): PolicyType,
+    }
+)
+@websocket_api.ws_require_user()
+@websocket_api.async_response
+async def websocket_edit_policy(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Return the current user groups."""
+    await hass.auth.async_edit_policy(
+        msg["group_id"], msg["source_user"], msg["policy"]
     )
     connection.send_message(websocket_api.result_message(msg["id"], "done"))
 

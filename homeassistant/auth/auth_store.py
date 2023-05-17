@@ -21,6 +21,7 @@ from .const import (
     GROUP_ID_USER,
 )
 from .permissions import system_policies
+from .permissions.merge import merge_policies
 from .permissions.models import PermissionLookup
 from .permissions.types import PolicyType
 
@@ -102,6 +103,25 @@ class AuthStore:
             _user.groups.append(group)
         self._async_schedule_save()
         return _user
+
+    async def async_add_group_without_policy(self, name: str) -> models.Group | None:
+        """Add a new group."""
+        if self._groups is None:
+            await self._async_load()
+        assert self._users is not None
+        assert self._groups is not None
+        kwargs: dict[str, Any] = {
+            "name": name,
+            "policy": None,
+            "system_generated": False,
+            "group_ids": [],
+            "group_ids_obj": [],
+        }
+        new_group: models.Group = models.Group(**kwargs)
+        if isinstance(new_group, models.Group):
+            self._groups[new_group.id] = new_group
+            self._async_schedule_save_groups()
+        return new_group
 
     async def async_add_group(
         self, name: str, entity: str, read: bool, control: bool, edit: bool
@@ -245,18 +265,194 @@ class AuthStore:
 
         self._async_schedule_save()
 
-    async def async_get_users_having_permission(
+    async def async_get_users_having_permission_group(
         self, group_id: str
     ) -> list[models.User]:
-        """Get users having permission."""
-        await self.async_get_users()
-        # if users is None:
-        #     return []
+        """Get users having permission (not decision power)."""
+        users: list[models.User] = await self.async_get_users()
         user_with_permission: list[models.User] = []
-        # for user in users:
-        # check if access to group
-        #     continue
+        for user in users:
+            recursif_group: list[str] = []
+            # search recursively in group
+            for group in user.groups:
+                recursif_group.append(group.id)
+                temp = await self.recursif_group(group.id)
+                recursif_group.extend(temp)
+            # if user.permissions.check_group(group_id):
+            if group_id in recursif_group:
+                user_with_permission.append(user)
         return user_with_permission
+
+    async def recursif_group(self, group_id: str) -> list[str]:
+        """Get users having permission."""
+        temp = await self.async_get_group(group_id)
+        if temp is None:
+            return []
+        group: models.Group = temp
+        if (
+            group.name is None
+            or group.name.startswith("DM")
+            or group.name.startswith("DT")
+        ):
+            return []
+        all_group: list[str] = []
+        for gro in group.group_ids:
+            all_group.append(gro)
+            all_group.extend(await self.recursif_group(gro))
+        return all_group
+
+    async def async_get_users_member_of_dm(self, group_id: str) -> list[models.User]:
+        """Get users having decision power."""
+        users: list[models.User] = await self.async_get_users()
+        user_with_permission: list[models.User] = []
+        for user in users:
+            recursif_group: list[str] = []
+            # search recursively in group
+            for group in user.groups:
+                recursif_group.append(group.id)
+                temp = await self.recursif_group_decision(group.id)
+                recursif_group.extend(temp)
+            # if user.permissions.check_group(group_id):
+            if group_id in recursif_group:
+                user_with_permission.append(user)
+        return user_with_permission
+
+    async def recursif_group_decision(self, group_id: str) -> list[str]:
+        """Get users having decision power."""
+        temp = await self.async_get_group(group_id)
+        if temp is None:
+            return []
+        group: models.Group = temp
+        all_group: list[str] = []
+        for gro in group.group_ids:
+            all_group.append(gro)
+            all_group.extend(await self.recursif_group(gro))
+        return all_group
+
+    async def async_link_entity_to_dg(self, entity_id: str, group_id: str) -> None:
+        """Add entity to dg."""
+        temp = await self.async_get_group(group_id)
+        if temp is None:
+            return None
+        group: models.Group = temp
+
+        new_policy: PolicyType = {
+            "entities": {
+                "entity_ids": {
+                    entity_id: {
+                        "read": True,
+                        "control": True,
+                        "edit": True,
+                    }
+                }
+            }
+        }
+
+        policies: PolicyType = merge_policies([group.policy, new_policy])
+        group.policy = policies
+
+        if self._groups is not None:
+            self._groups[group_id] = group
+        self._async_schedule_save()
+        return None
+
+    async def async_add_dg(
+        self,
+        name: str,
+    ) -> str | None:
+        """Create DG and return his id."""
+        temp = await self.async_add_group_without_policy("DG_" + name)
+        if temp is None:
+            return None
+        group: models.Group = temp
+        return group.id
+
+    async def async_add_dt(self, name: str) -> str | None:
+        """Create DT and return his id."""
+        temp = await self.async_add_group_without_policy("DT_" + name)
+        if temp is None:
+            return None
+        group: models.Group = temp
+        return group.id
+
+    async def async_add_dm(self, name: str) -> str | None:
+        """Create DM and return his id."""
+        temp = await self.async_add_group_without_policy("DM_" + name)
+        if temp is None:
+            return None
+        group: models.Group = temp
+        return group.id
+
+    async def async_set_policy(self, group_id: str, policy: PolicyType) -> None:
+        """Set policy."""
+        temp = await self.async_get_group(group_id)
+        if temp is None:
+            return None
+        group: models.Group = temp
+        # first check if no policy
+        # if group.policy is None:
+        #     return None
+        group.policy = policy
+
+    async def async_edit_policy(
+        self, group_id: str, source_user: str, policy: PolicyType
+    ) -> None:
+        """Set policy."""
+        temp = await self.async_get_group(group_id)
+        if temp is None:
+            return None
+        group: models.Group = temp
+        # check if permissions to edit
+        users = await self.async_get_users_having_permission_group(group_id)
+        # if users is None:
+        #     return None
+        source = await self.async_get_user(source_user)
+        if source not in users:
+            return None
+
+        # if not isinstance(policy, PolicyType):
+        #     return None
+        group.policy = policy
+
+    async def async_append_group_ids(self, group: str, group_target: str) -> None:
+        """RDRA and RH and DMRA and DT assignment and DMDTA."""
+        if self._groups is not None:
+            self._groups[group].group_ids.append(group_target)
+        self._async_schedule_save()
+        return None
+
+    async def async_remove_group_ids(self, group: str, group_target: str) -> None:
+        """RDRA and RH and DMRA and DT assignment and DMDTA."""
+        if self._groups is not None:
+            self._groups[group].group_ids.remove(group_target)
+        self._async_schedule_save()
+        return None
+
+    async def async_append_group_ids_to_users(
+        self, user: str, group_target: str
+    ) -> None:
+        """UA."""
+        temp = await self.async_get_group(group_target)
+        if not isinstance(temp, models.Group):
+            return None
+        target: models.Group = temp
+        if self._users is not None:
+            self._users[user].groups.append(target)
+        self._async_schedule_save()
+        return None
+
+    async def async_remove_group_ids_to_users(
+        self, user: str, group_target: str
+    ) -> None:
+        """UA."""
+        temp = await self.async_get_group(group_target)
+        if not isinstance(temp, models.Group):
+            return None
+        target: models.Group = temp
+        if self._users is not None:
+            self._users[user].groups.remove(target)
+        self._async_schedule_save()
+        return None
 
     async def async_add_decision(
         self, source_user: str, target: str, group: str, action: str
@@ -266,7 +462,12 @@ class AuthStore:
         if user is None:
             return None
 
-        # check if has right to access (member of DM)
+        dm_users: list[
+            models.User
+        ] = await self.hass.auth.async_get_users_having_permission_group(group)
+        if user not in dm_users:
+            return None
+
         decision: models.Decision = models.Decision(source_user, target, group, action)
         user.decisions.append(decision)
         self._async_schedule_save()
@@ -303,28 +504,192 @@ class AuthStore:
         if temp is None:
             return None
         # check if has right to access (member of DM)
+        users = await self.async_get_users_having_permission_group(group)
+        origin = await self.async_get_user(origin_user)
+        if origin not in users:
+            return None
+
         decision: models.Decision = temp
         if vote:
             decision.approve.append(origin_user)
         else:
             decision.reject.append(origin_user)
+        self._async_schedule_save()
         # check result
+        await self.perform_action(decision)
+        return None
 
+    async def perform_action(self, decision: models.Decision) -> None:
+        """Perform action in decision."""
+        temp = await self.async_get_users_member_of_dm(decision.group)
+        tempa = await self.async_get_dm(decision.group)
+        tempad = await self.async_get_dt(decision.group)
+        tempada = await self.async_get_group(decision.group)
+        if temp is None or tempa is None or tempad is None or tempada is None:
+            return None
+        group, dman, dtask, cgroup = temp, tempa, tempad, tempada
+        # le = len (group)
+
+        match decision.action:
+            case "AssignUA":
+                ana = dtask.policy["groups"]
+                if not isinstance(ana, dict):
+                    return None
+                action_thresh = ana["AssignUA"]
+                if not isinstance(action_thresh, float):
+                    return None
+                if action_thresh < len(decision.approve) / len(group):
+                    user = await self.async_get_user(decision.target)
+                    if user is None:
+                        return None
+                    user.groups.append(cgroup)
+            case "RevokeUA":
+                ana = dtask.policy["groups"]
+                if not isinstance(ana, dict):
+                    return None
+                action_thresh = ana["RevokeUA"]
+                if not isinstance(action_thresh, float):
+                    return None
+                if action_thresh < len(decision.approve) / len(group):
+                    user = await self.async_get_user(decision.target)
+                    if user is None:
+                        return None
+                    user.groups.remove(cgroup)
+            case "AssignRDR":
+                ana = dtask.policy["groups"]
+                if not isinstance(ana, dict):
+                    return None
+                action_thresh = ana["AssignRDR"]
+                if not isinstance(action_thresh, float):
+                    return None
+                if action_thresh < len(decision.approve) / len(group):
+                    gro = await self.async_get_group(decision.target)
+                    if gro is None:
+                        return None
+                    gro.group_ids.append(decision.group)
+            case "RevokeRDR":
+                ana = dtask.policy["groups"]
+                if not isinstance(ana, dict):
+                    return None
+                action_thresh = ana["RevokeRDR"]
+                if not isinstance(action_thresh, float):
+                    return None
+                if action_thresh < len(decision.approve) / len(group):
+                    gro = await self.async_get_group(decision.target)
+                    if gro is None:
+                        return None
+                    gro.group_ids.append(decision.group)
+            case "AssignRH":
+                ana = dtask.policy["groups"]
+                if not isinstance(ana, dict):
+                    return None
+                action_thresh = ana["AssignRH"]
+                if not isinstance(action_thresh, float):
+                    return None
+                if action_thresh < len(decision.approve) / len(group):
+                    gro = await self.async_get_group(decision.target)
+                    if gro is None:
+                        return None
+                    gro.group_ids.append(decision.group)
+            case "RevokeRH":
+                ana = dtask.policy["groups"]
+                if not isinstance(ana, dict):
+                    return None
+                action_thresh = ana["RevokeRH"]
+                if not isinstance(action_thresh, float):
+                    return None
+                if action_thresh < len(decision.approve) / len(group):
+                    gro = await self.async_get_group(decision.target)
+                    if gro is None:
+                        return None
+                    gro.group_ids.append(decision.group)
+            case "AssignDMR":
+                ana = dman.policy["groups"]
+                if not isinstance(ana, dict):
+                    return None
+                action_thresh = ana["AssignRDR"]
+                if not isinstance(action_thresh, float):
+                    return None
+                if action_thresh < len(decision.approve) / len(group):
+                    gro = await self.async_get_group(decision.target)
+                    if gro is None:
+                        return None
+                    gro.group_ids.append(decision.group)
+            case "RevokeDMR":
+                ana = dman.policy["groups"]
+                if not isinstance(ana, dict):
+                    return None
+                action_thresh = ana["RevokeDMR"]
+                if not isinstance(action_thresh, float):
+                    return None
+                if action_thresh < len(decision.approve) / len(group):
+                    gro = await self.async_get_group(decision.target)
+                    if gro is None:
+                        return None
+                    gro.group_ids.append(decision.group)
+            case "EditPolicy":
+                ana = cgroup.policy["groups"]
+                if not isinstance(ana, dict):
+                    return None
+                edit_policy = ana["EditPolicy"]
+                if not isinstance(edit_policy, float):
+                    return None
+
+                if (
+                    edit_policy < len(decision.approve) / len(group)
+                    and decision.policy is not None
+                ):
+                    await self.async_edit_policy(
+                        decision.target, decision.source, decision.policy
+                    )
         self._async_schedule_save()
         return None
 
-    async def async_decision_checker(
-        self, source_user: str, target: str, group: str, action: str
-    ) -> None:
-        """Check decision."""
-        # self.async_get_decision(source_user, target, action)
-        # if decision is None:
-        #     return None
-        # check decision
-        # first find all voters
-        # second compute threshold
-        # third set result if needed
-        # forth add group to member if needed
+    # async def async_decision_checker(
+    #     self, source_user: str, target: str, group: str, action: str
+    # ) -> None:
+    #     """Check decision."""
+    #     # self.async_get_decision(source_user, target, action)
+    #     # if decision is None:
+    #     #     return None
+    #     # check decision
+    #     # first find all voters
+    #     # second compute threshold
+    #     # third set result if needed
+    #     # forth add group to member if needed
+    #     return None
+
+    async def async_get_dt(self, group_id: str) -> models.Group | None:
+        """Get DT."""
+        groups = await self.async_get_groups()
+        for group in groups:
+            for gro in group.group_ids:
+                if gro == group_id:
+                    return group
+        return None
+
+    async def async_get_dm(self, group_id: str) -> models.Group | None:
+        """Get DM."""
+        groups = await self.async_get_groups()
+        dtask = ""
+        for group in groups:
+            for gro in group.group_ids:
+                if (
+                    gro == group_id
+                    and group.name is not None
+                    and group.name.startswith("DT")
+                ):
+                    dtask = gro
+                    break
+        for group in groups:
+            for gro in group.group_ids:
+                if (
+                    gro == dtask
+                    and group.name is not None
+                    and group.name.startswith("DM")
+                ):
+                    return group
+
         return None
 
     async def async_activate_user(self, user: models.User) -> None:
@@ -512,7 +877,11 @@ class AuthStore:
 
             else:
                 name = group_dict["name"]
-                policy = group_dict.get("policy")
+                policy = None
+                policy = group_dict["policy"]
+                # if pol is None:
+                #     pol = {"enties": {"entity_ids": {}}}
+                # policy: PolicyType = pol
                 system_generated = False
 
             if "group_ids" in group_dict:
@@ -521,6 +890,8 @@ class AuthStore:
                 for _idx, group_id in enumerate(group_dict["group_ids"]):
                     group_ids_obj.append(groups[group_id])
 
+            if policy is None:
+                policy = {"entities": {"entities_ids": None}}
             # We don't want groups without a policy that are not system groups
             # This is part of migrating from state 1
             # elif policy is None:

@@ -90,6 +90,13 @@ def _lookup_entity_id(
     return entities_dict.get(entity_id)
 
 
+def _lookup_group_id(
+    perm_lookup: PermissionLookup, group_dict: SubCategoryDict, group_id: str
+) -> ValueType | None:
+    """Look up entity permission by entity id."""
+    return group_dict.get(group_id)
+
+
 def compile_entities(
     policy: CategoryType, perm_lookup: PermissionLookup
 ) -> Callable[[str, str], bool]:
@@ -102,3 +109,18 @@ def compile_entities(
     subcategories[SUBCAT_ALL] = lookup_all
 
     return compile_policy(policy, subcategories, perm_lookup)
+
+
+# def compile_groups(
+#     policy: CategoryType, perm_lookup: PermissionLookup
+# ) -> Callable[[ str], bool]:
+#     """Compile policy into a function that tests policy."""
+#     subcategories: SubCatLookupType = OrderedDict()
+#     # subcategories[ENTITY_ENTITY_IDS] = _lookup_entity_id
+#     # subcategories[ENTITY_DEVICE_IDS] = _lookup_device
+#     # subcategories[ENTITY_AREAS] = _lookup_area
+#     # subcategories[ENTITY_DOMAINS] = _lookup_domain
+#     # subcategories[SUBCAT_ALL] = lookup_all
+#     subcategories[GROUP_IDS] = _lookup_group_id
+
+#     return _lookup_group_id(perm_lookup, policy)
